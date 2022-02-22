@@ -103,5 +103,12 @@ namespace Pathfinding
             transform.localPosition = mousePos;
             child.transform.localPosition = new Vector3(0, 0, 0);
         }
+
+
+        public void resetArrowScript()
+        {
+            startedPlacingGoal = false;
+            finishedPlacingGoal = false;
+        }
     }
 }

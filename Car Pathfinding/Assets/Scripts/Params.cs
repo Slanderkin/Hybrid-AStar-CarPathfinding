@@ -21,6 +21,8 @@ namespace Pathfinding
 
         public const float carSpriteScale = 30;
         public const float carLength = 150;
+        public const float carWidth = Parameters.carLength / 3; //The choice to make its width a third of its length is somewhat arbitrary
+
         public const float carX0 = worldSizeX / 2;
         public const float carY0 = worldSizeY / 2;
 

@@ -22,7 +22,6 @@ namespace Pathfinding
         //Local versions of car parameters
         private float carSpeed = Parameters.speed;
         private float carLength = Parameters.carLength;
-        /////////////////////////////////////////////////////private float carWidth = Parameters.carLength/3; //The choice to make its width a third of its length is somewhat arbitrary
         private float turnAngle = Parameters.turnAngle;
 
         //Get the attributes of the arrow (also its game object and script)
@@ -52,9 +51,6 @@ namespace Pathfinding
         public ArrowScript arrowScript;
         public DrawManager drawManager;
         public UIScript uiScript;
-        
-
-        public Material lineMaterial;
         public bool doDraw;
 
         //Make a 2d array of hashmap of intlists
@@ -261,33 +257,17 @@ namespace Pathfinding
             goalSet = true;
         }
 
-        //Draws lines using the DrawManager
-        void OnRenderObject()
+        //Resets the pathfinding values to their base values
+        public void resetPathfinding()
         {
-            if (startedPathfinding && nodeList != null)
-            {
-                if (nodeList.Count > 0)
-                {
-                    lineMaterial.SetPass(0);
-                    GL.PushMatrix();
-                    GL.Begin(GL.LINES);
+            startedPathfinding = false;
+            donePathfinding = false;
+            goalSet = false;
 
-                    for (int i = 0; i < nodeList.Count; i++)
-                    {
-                        for(int j =0; j < nodeList[i].numChildren; j++)
-                        {
-                            drawManager.drawPath(nodeList[i].pose, nodeList[i].childPoses[j], lineMaterial);
-                        }
-                    }
-
-
-                    GL.End();
-                    GL.PopMatrix();
-                }
-            }            
-            
+            costQueue.Clear();
+            currNode = null;
+            nodeList.Clear();
         }
-
 
         //====================================
         //       Misc Getter Functions
@@ -519,11 +499,18 @@ namespace Pathfinding
             }
         }
 
-        //Returns the node most recently used by the debugger
+        //Returns the node most recently used
         public Node getLatestNode()
         {
             if (currNode != null)
                 return currNode;
+            return null;
+        }
+
+        public List<Node> getNodeList()
+        {
+            if (nodeList != null)
+                return nodeList;
             return null;
         }
     }

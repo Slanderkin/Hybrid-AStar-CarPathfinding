@@ -20,11 +20,7 @@ namespace Pathfinding
             return EventSystem.current.IsPointerOverGameObject();
         }
 
-        //Closes the application
-        public void exitApp()
-        {
-            Application.Quit();
-        }
+        
 
 
 

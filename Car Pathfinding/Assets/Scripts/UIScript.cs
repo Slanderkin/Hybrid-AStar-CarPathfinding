@@ -10,6 +10,7 @@ public class UIScript : MonoBehaviour
     Toggle visiblityToggle;
     Toggle gridToggle;
     Toggle debugToggle;
+    Toggle pathfindingLinesToggle;
 
     private Text iterNum;
 
@@ -22,6 +23,7 @@ public class UIScript : MonoBehaviour
 
     public PathFinding pathfindingScript;
     public DrawManager drawManager;
+    public ArrowScript arrowScript;
 
     // Start is called before the first frame update
     void Start()
@@ -29,21 +31,27 @@ public class UIScript : MonoBehaviour
         visiblityToggle = this.transform.Find("Sprite Visibility Toggle").GetComponentInChildren<Toggle>();
 
         visiblityToggle.onValueChanged.AddListener(delegate {
-            updateSpriteVisiblity(visiblityToggle);
+            updateToggle(visiblityToggle);
         });
 
         gridToggle = this.transform.Find("Grid Visibility Toggle").GetComponentInChildren<Toggle>();
 
         gridToggle.onValueChanged.AddListener(delegate {
-            updateSpriteVisiblity(gridToggle);
+            updateToggle(gridToggle);
         });
 
         debugToggle = this.transform.Find("Debug Menu Toggle").GetComponentInChildren<Toggle>();
 
         debugToggle.onValueChanged.AddListener(delegate {
-            updateSpriteVisiblity(debugToggle);
+            updateToggle(debugToggle);
         });
 
+        pathfindingLinesToggle = this.transform.Find("Pathfinding Line Toggle").GetComponentInChildren<Toggle>();
+
+        pathfindingLinesToggle.onValueChanged.AddListener(delegate {
+            updateToggle(pathfindingLinesToggle);
+        });
+        
         debugMenu.enabled = false;
 
         iterNum = debugMenu.transform.Find("Iteration Number").GetComponent<Text>();
@@ -59,7 +67,7 @@ public class UIScript : MonoBehaviour
     }
 
     //Updates the visibility of the car and the arrow
-    void updateSpriteVisiblity(Toggle toToggle )
+    void updateToggle(Toggle toToggle )
     {
         if(toToggle.name == "Grid Visibility Toggle")
         {
@@ -80,6 +88,13 @@ public class UIScript : MonoBehaviour
             debugMenu.enabled = toToggle.isOn;
 
         }
+        else if (toToggle.name == "Pathfinding Line Toggle")
+        {
+            if (pathfindingScript.startedPathfinding)
+            {
+                drawManager.doDrawPathfinding = toToggle.isOn;
+            }
+        }
 
     }
 
@@ -87,6 +102,9 @@ public class UIScript : MonoBehaviour
     {
         //Don't run this if we haven't set a goal yet
         if (!pathfindingScript.arrowScript.finishedPlacingGoal)
+            return;
+        //Don't run this si we are done pathfinding
+        else if (pathfindingScript.donePathfinding)
             return;
 
         pathfindingScript.simNextNode();
@@ -112,6 +130,9 @@ public class UIScript : MonoBehaviour
     {
         //Don't run this if we haven't set a goal yet
         if (!pathfindingScript.arrowScript.finishedPlacingGoal)
+            return;
+        //Don't run this si we are done pathfinding
+        else if (pathfindingScript.donePathfinding)
             return;
 
         pathfindingScript.simNextPath();
@@ -144,4 +165,13 @@ public class UIScript : MonoBehaviour
     {
         Application.Quit();
     }
+
+    //Resets the vars in the misc scripts
+    public void resetScripts()
+    {
+        pathfindingScript.resetPathfinding();
+        arrowScript.resetArrowScript();
+        drawManager.resetDrawManager();
+    }
+
 }

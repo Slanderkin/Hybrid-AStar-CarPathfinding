@@ -15,7 +15,16 @@ namespace Pathfinding
         public SpriteRenderer carSpriteRenderer;
         public PathFinding pathFinding;
         public LineRenderer finalPath;
+        public Material lineMaterial;
+
         private bool drawnFinal = false;
+        public bool doDrawPathfinding = true;
+
+        public GameObject nodeCirclePrefab;
+        public GameObject lineRendererPrefab;
+
+        private List<GameObject> nodeCircleList;
+        private List<GameObject> lineRendererList;
 
         void Start()
         {
@@ -87,22 +96,106 @@ namespace Pathfinding
             drawnFinal = true;
             List<Vector3> nodePositions = new List<Vector3>();
 
+            Vector3 tempPose;
             Node currNode = endNode;
+            int counter = 0;
             while(currNode != null)
             {
-                nodePositions.Add(new Vector3(currNode.pose.x,currNode.pose.y,-1)); // making the z -1 has it draw over the base lines
+                tempPose = new Vector3(currNode.pose.x, currNode.pose.y, -1);
+                nodePositions.Add(tempPose); // making the z -1 has it draw over the base lines
+                if(counter != 0) { }
+                    drawFinalPathNode(tempPose,counter);
+                //drawCarHitbox(currNode.pose); This doesn't seem to add much information. More distracting than anything
                 currNode = currNode.cameFrom;
+                counter++;
             }
             finalPath.positionCount = nodePositions.Count;
             finalPath.SetPositions(nodePositions.ToArray());
             finalPath.startColor = Color.green;
             finalPath.endColor = Color.green;
-            finalPath.startWidth = 5f;
-            finalPath.endWidth = 5f;
+            finalPath.startWidth = 1f;
+            finalPath.endWidth = 1f;
             finalPath.sortingOrder = 2;
         }
 
-        
+        //Places a circle at the given point in the node path
+        public void drawFinalPathNode(Vector3 nodeLocation, int num)
+        {
+            GameObject tempObj = Instantiate(nodeCirclePrefab);
+            tempObj.transform.position = nodeLocation;
+            tempObj.name = "Node Circle: " + num.ToString();
+            nodeCircleList.Add(tempObj);
+
+        }
+
+        //Draws a rectangle at each node on the path to simulate the car's hitbox
+        public void drawCarHitbox(Vector3 nodePose)
+        {
+            Matrix4x4 rotationMatrix = Matrix4x4.Rotate(Quaternion.Euler(0, 0, nodePose[2]*180/Mathf.PI));
+            GameObject tmpObj =  Instantiate(lineRendererPrefab);
+            tmpObj.transform.position = (Vector2)nodePose;
+            tmpObj.transform.rotation = Quaternion.Euler(0, 0, nodePose[2] * 180 / Mathf.PI);
+            LineRenderer tmpLR = tmpObj.GetComponent<LineRenderer>();
+
+            tmpLR.useWorldSpace = false;
+
+            //List<Vector3> rectPoints = new List<Vector3>() {new Vector3(nodePose.x + Parameters.carLength/2, nodePose.y + Parameters.carWidth / 2,-1), new Vector3(nodePose.x + Parameters.carLength / 2, nodePose.y - Parameters.carWidth / 2, -1), new Vector3(nodePose.x - Parameters.carLength / 2, nodePose.y - Parameters.carWidth / 2, -1), new Vector3(nodePose.x - Parameters.carLength / 2, nodePose.y + Parameters.carWidth / 2, -1) };
+            List<Vector3> rectPoints = new List<Vector3>() { new Vector3(Parameters.carLength / 2,Parameters.carWidth / 2, -1), new Vector3(Parameters.carLength / 2, -Parameters.carWidth / 2, -1), new Vector3(-Parameters.carLength / 2, -Parameters.carWidth / 2, -1), new Vector3(-Parameters.carLength / 2, Parameters.carWidth / 2, -1) };
+
+            tmpLR.positionCount = rectPoints.Count + 1;
+
+            for (int i = 0; i < rectPoints.Count; i++)
+            {
+                tmpLR.SetPosition(i, rotationMatrix.MultiplyPoint3x4(rectPoints[i]));
+            }
+            tmpLR.SetPosition(rectPoints.Count, rotationMatrix.MultiplyPoint3x4(rectPoints[0]));
+
+            lineRendererList.Add(tmpObj);
+
+        }
+
+        //Deletes and sprites and line renderers instantiated
+        public void resetDrawManager()
+        {
+            //Need two different loops because the length of these loops won't always be the same (
+            foreach (GameObject lineRendererObj in lineRendererList)
+            {
+                Destroy(lineRendererObj);
+            }
+            foreach (GameObject nodeCircle in nodeCircleList)
+            {
+                Destroy(nodeCircle);
+            }
+        }
+
+        //Draws lines using the DrawManager
+        void OnRenderObject()
+        {
+            List<Node> latestNodeList = pathFinding.getNodeList();
+            if (pathFinding.startedPathfinding && latestNodeList != null && doDrawPathfinding)
+            {
+                if (latestNodeList.Count > 0)
+                {
+                    lineMaterial.SetPass(0);
+                    GL.PushMatrix();
+                    GL.Begin(GL.LINES);
+
+                    for (int i = 0; i < latestNodeList.Count; i++)
+                    {
+                        for (int j = 0; j < latestNodeList[i].numChildren; j++)
+                        {
+                            drawPath(latestNodeList[i].pose, latestNodeList[i].childPoses[j], lineMaterial);
+                        }
+                    }
+
+
+                    GL.End();
+                    GL.PopMatrix();
+                }
+            }
+
+        }
+
     }
 }
 
