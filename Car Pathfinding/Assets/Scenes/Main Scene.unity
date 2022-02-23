@@ -829,7 +829,7 @@ MonoBehaviour:
   debugMenu: {fileID: 1748944260}
   pathfindingScript: {fileID: 846933456}
   drawManager: {fileID: 2132023051}
-  arrowScript: {fileID: 0}
+  arrowScript: {fileID: 1054519299}
 --- !u!1 &676061433
 GameObject:
   m_ObjectHideFlags: 0
@@ -1811,7 +1811,7 @@ MonoBehaviour:
   child: {fileID: 1519277775}
   finishedPlacingGoal: 0
   arrowScale: 15
-  spriteRenderer: {fileID: 0}
+  spriteRenderer: {fileID: 1519277777}
 --- !u!1 &1120423176
 GameObject:
   m_ObjectHideFlags: 0

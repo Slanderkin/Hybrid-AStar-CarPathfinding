@@ -24,7 +24,7 @@ namespace Pathfinding
         public GameObject lineRendererPrefab;
 
         private List<GameObject> nodeCircleList;
-        private List<GameObject> lineRendererList;
+        private List<GameObject> hitboxLineRendererList;
 
         void Start()
         {
@@ -35,6 +35,9 @@ namespace Pathfinding
 
             carSpriteRenderer.transform.localScale = new Vector3(Parameters.carSpriteScale, Parameters.carSpriteScale, 1);
             carSpriteRenderer.transform.position = new Vector3(Parameters.carX0, Parameters.carY0, 1);
+
+            nodeCircleList = new List<GameObject>();
+            hitboxLineRendererList = new List<GameObject>();
         }
 
         void Update()
@@ -43,8 +46,7 @@ namespace Pathfinding
             {
                 drawCircle(pathFinding.getLatestNode().pose, false); //Takes the vector3 and casts it as a vector2
                 currNodeRenderer.enabled = true;
-            }
-                
+            }   
             else
                 currNodeRenderer.enabled = false;
 
@@ -113,8 +115,8 @@ namespace Pathfinding
             finalPath.SetPositions(nodePositions.ToArray());
             finalPath.startColor = Color.green;
             finalPath.endColor = Color.green;
-            finalPath.startWidth = 1f;
-            finalPath.endWidth = 1f;
+            finalPath.startWidth = 2f;
+            finalPath.endWidth = 2f;
             finalPath.sortingOrder = 2;
         }
 
@@ -150,7 +152,7 @@ namespace Pathfinding
             }
             tmpLR.SetPosition(rectPoints.Count, rotationMatrix.MultiplyPoint3x4(rectPoints[0]));
 
-            lineRendererList.Add(tmpObj);
+            hitboxLineRendererList.Add(tmpObj);
 
         }
 
@@ -158,7 +160,7 @@ namespace Pathfinding
         public void resetDrawManager()
         {
             //Need two different loops because the length of these loops won't always be the same (
-            foreach (GameObject lineRendererObj in lineRendererList)
+            foreach (GameObject lineRendererObj in hitboxLineRendererList)
             {
                 Destroy(lineRendererObj);
             }
@@ -166,7 +168,12 @@ namespace Pathfinding
             {
                 Destroy(nodeCircle);
             }
+            finalPath.positionCount = 0;
+            goalRenderer.transform.position = new Vector2(-10000, -10000);
+            drawnFinal = false;
+            doDrawPathfinding = true;
         }
+    
 
         //Draws lines using the DrawManager
         void OnRenderObject()

@@ -61,17 +61,18 @@ namespace Pathfinding
 
         void Start()
         {
-
             worldWidth = (int)Parameters.worldSizeX;
             worldHeight = (int)Parameters.worldSizeY;
-
-            lookUp = new HashSet<int>[worldWidth, worldHeight];
 
             helper = new Helper();
 
             costQueue = new FastPriorityQueue<Node>(priorityQueueMaxSize);
 
             nodeList = new List<Node>();
+
+
+            //Setup the hashtable used in the A* for pose lookups
+            lookUp = new HashSet<int>[worldWidth, worldHeight];
 
             for (int i = 0; i < worldWidth; i++)
             {
@@ -263,10 +264,24 @@ namespace Pathfinding
             startedPathfinding = false;
             donePathfinding = false;
             goalSet = false;
+            iterationNum = 0;
 
             costQueue.Clear();
             currNode = null;
             nodeList.Clear();
+            cleanLookup();
+        }
+
+        //Empties the hash table that stores the various angles that we have observed at each x,y location, this is basically 3D A* capturing 2D motion: x,y,theta
+        private void cleanLookup()
+        {
+            for (int i = 0; i < worldWidth; i++)
+            {
+                for (int j = 0; j < worldHeight; j++)
+                {
+                    lookUp[i, j].Clear();
+                }
+            }
         }
 
         //====================================
