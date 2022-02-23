@@ -4,4 +4,4 @@ This is a project to implement a hybrid A* pathfinding algorithm applied to a ca
 
 To start, hold left click anywhere within the white border and move your mouse to set the end angle. Use WASD to move the camera and scroll to zoom in/out. You can step through the pathfinding one path or one node at a time by enabling the debug menu. 
 
-I am working on either adding a restart button or allowing the user to place a new end point after the current one they placed (ie no way to do multiple pathfinding events yet).
+I am working on improving the restart button to not be a button.
