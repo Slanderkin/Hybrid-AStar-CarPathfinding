@@ -2,8 +2,60 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Pathfinding;
-public class CarScript : MonoBehaviour
+public class Car : MonoBehaviour
 {
+
+    public WorldScript world;
+
+    public GameObject carObj;
+    public GameObject carGhostObj; //The previous car pose will have a faded sprite (the "ghost")
+    
+    public SpriteRenderer carSprite;
+    public SpriteRenderer ghostSprite;
+
+    public BoxCollider2D carCollider;
+
+    public Vector3 currPose;
+    public Vector3 prevPose;
+    public float speed;
+    public float turnAngle;
+    public float carSpriteScale;
+    public float carLength;
+    public float carWidth;
+
+    private void Start()
+    {
+        prevPose = new Vector3(-1, -1, 0); //This sprite will be disabled until the pose is changed from -1
+        currPose = new Vector3(Parameters.carX0, Parameters.carY0, Parameters.carTheta0);
+        speed = Parameters.speed;
+        turnAngle = Parameters.turnAngle;
+        carSpriteScale = Parameters.carSpriteScale;
+        carLength = Parameters.carLength;
+        carWidth = Parameters.carWidth;
+
+    }
+    
+    
+
+    private void Update()
+    {
+        
+    }
+
+    //Takes the pose that was ended at with the previous A* iteration and updates the ghost's pose
+    public void updatePose(Vector3 newPose)
+    {
+        prevPose = currPose;
+        currPose = newPose;
+    }
+
+
+    /*
+    void OnTriggerEnter(Collider other)
+    {
+        Debug.Log("Detected collision between " + gameObject.name + "and " + other.GetComponent<Collider>().name);
+    }*/
+
     /*
     public float carScale = 30f;
     public float speed = 1.5f;

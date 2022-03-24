@@ -13,18 +13,25 @@ namespace Pathfinding
         private Vector3 endPoint;
         private Vector3 directionVector;
         private float vectorAngle;
+        public Vector3 pose;
+
         private float arrowOffset = 0.2f;
-        private bool startedPlacingGoal = false;
+        public bool startedPlacingGoal = false;
         public bool finishedPlacingGoal = false;
 
-        public float arrowScale = 15f;
+        public float arrowScale = 23f;
 
         private float width;
         private float height;
 
         private Helper helper;
 
-        public SpriteRenderer spriteRenderer;
+        public PathFinding pathFinding;
+        public WorldScript worldScript;
+
+        public GameObject arrowCollisionDummy;
+        public BoxCollider2D arrowCollisionDummyCollider;
+
         // Start is called before the first frame update
         void Start()
         {
@@ -33,12 +40,11 @@ namespace Pathfinding
 
             transform.position = new Vector3(0, 0, 0);
             child.transform.position = new Vector3(0, 0, -100);
-            spriteRenderer = child.GetComponent<SpriteRenderer>();
-            spriteRenderer.transform.localScale = new Vector3(arrowScale, arrowScale, 1);
-            spriteRenderer.color = new Color(spriteRenderer.color.r, spriteRenderer.color.g, spriteRenderer.color.b, 0.5f); //Can't just change the color.a field :(
 
             width = Parameters.worldSizeX;
             height = Parameters.worldSizeY;
+
+            arrowCollisionDummy.transform.localScale = new Vector3(30, 30, 1);
         }
 
         // Update is called once per frame
@@ -48,7 +54,7 @@ namespace Pathfinding
                 preSelectHover();
             if (!helper.isMouseOverUi())
                 checkMouse();
-
+            pose = new Vector3(transform.position.x, transform.position.y, vectorAngle);
         }
 
         //Checks if the mouse has been set
@@ -72,12 +78,12 @@ namespace Pathfinding
                 }
                 else if (startedPlacingGoal && !finishedPlacingGoal)
                 {
-                    spriteRenderer.color = new Color(spriteRenderer.color.r, spriteRenderer.color.g, spriteRenderer.color.b, 1f);
+                    
                     endPoint = Camera.main.ScreenToWorldPoint(Input.mousePosition);
                     directionVector = endPoint - startPoint;
                     directionVector = directionVector.normalized;
                     vectorAngle = Mathf.Atan2(directionVector[1], directionVector[0]);
-                    child.transform.rotation = Quaternion.Euler(0, 0, vectorAngle * 180 / Mathf.PI);
+                    child.transform.rotation = Quaternion.Euler(0, 0, vectorAngle*Mathf.Rad2Deg);
                     child.transform.localPosition = new Vector3(Mathf.Sqrt(arrowOffset) * Mathf.Cos(vectorAngle), Mathf.Sqrt(arrowOffset) * Mathf.Sin(vectorAngle), 0);
 
                 }
@@ -89,8 +95,11 @@ namespace Pathfinding
                 directionVector = endPoint - startPoint;
                 directionVector = directionVector.normalized;
                 vectorAngle = Mathf.Atan2(directionVector[1], directionVector[0]);
-                child.transform.rotation = Quaternion.Euler(0, 0, vectorAngle * 180 / Mathf.PI);
+                child.transform.rotation = Quaternion.Euler(0, 0, vectorAngle * Mathf.Rad2Deg);
                 child.transform.localPosition = new Vector3(Mathf.Sqrt(arrowOffset) * Mathf.Cos(vectorAngle), Mathf.Sqrt(arrowOffset) * Mathf.Sin(vectorAngle), 0);
+
+                if (willCollide(new Vector3(transform.position[0], transform.position[1], vectorAngle)))
+                    resetArrowScript();
             }
 
         }
@@ -109,6 +118,34 @@ namespace Pathfinding
         {
             startedPlacingGoal = false;
             finishedPlacingGoal = false;
+        }
+
+        
+        //Detects if being in the proposed pose would cause a collision with an obstacle or the "world border" (This is not efficient)
+        public bool willCollide(Vector3 arrowPose)
+        {
+            arrowCollisionDummyCollider.transform.rotation = Quaternion.Euler(0, 0, arrowPose[2] * Mathf.Rad2Deg);
+            arrowCollisionDummyCollider.attachedRigidbody.position = (Vector2)arrowPose;
+            arrowCollisionDummyCollider.attachedRigidbody.transform.position = (Vector2)arrowPose;
+
+
+            //Detect if this new pose would cause a wall coliision
+            //if (maxPoints[0] > Parameters.worldSizeX || maxPoints[1] > Parameters.worldSizeY || minPoints[0] < 0 || minPoints[1] < 0)
+            //return true;
+            if (arrowCollisionDummyCollider.Distance(worldScript.borderCollider).isOverlapped)
+                return true;
+
+            //Loop through all of the obstacle colliders
+            //Do .distance from the ghost to each obstacle
+            //If any is overlapped, return as a collision occured and this is not a valid pose
+            foreach (Obstacle obstacle in worldScript.obstacleList)
+            {
+                if (arrowCollisionDummyCollider.Distance(obstacle.obstacleCollider).isOverlapped) { 
+                    return true;
+                }                
+            }
+
+            return false;
         }
     }
 }

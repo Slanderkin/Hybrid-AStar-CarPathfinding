@@ -20,9 +20,29 @@ namespace Pathfinding
             return EventSystem.current.IsPointerOverGameObject();
         }
 
-        
+        //TODO
+        public void checkCollision()
+        {
 
+        }
 
+        public void setUpObstacleCollider(Obstacle obstacle)
+        {
+            obstacle.obstacleGameobject.transform.position = obstacle.center;
+            BoxCollider2D tmpCollider = obstacle.obstacleGameobject.GetComponent<BoxCollider2D>();
+
+            tmpCollider.offset = new Vector2(0, 0);
+            tmpCollider.size = new Vector2(obstacle.length, obstacle.width);
+            tmpCollider.transform.rotation = Quaternion.Euler(0,0,obstacle.theta*Mathf.Rad2Deg);
+
+            obstacle.obstacleCollider = tmpCollider;
+
+        }
+
+        public void setupCarCollider()
+        {
+
+        }
 
 
 

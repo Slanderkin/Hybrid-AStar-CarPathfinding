@@ -21,7 +21,7 @@ public class UIScript : MonoBehaviour
     public MeshRenderer meshRenderer;
     public Canvas debugMenu;
 
-    public PathFinding pathfindingScript;
+    public PathFinding pathfinding;
     public DrawManager drawManager;
     public ArrowScript arrowScript;
 
@@ -63,7 +63,8 @@ public class UIScript : MonoBehaviour
     //Use this to update the iteration # regardless of whether we are in "debug mode" or not  
     private void Update()
     {
-        iterNum.text = "Iteration #: " + pathfindingScript.getIerationNum();
+        iterNum.text = "Iteration #: " + pathfinding.getIerationNum();
+
     }
 
     //Updates the visibility of the car and the arrow
@@ -90,10 +91,7 @@ public class UIScript : MonoBehaviour
         }
         else if (toToggle.name == "Pathfinding Line Toggle")
         {
-            if (pathfindingScript.startedPathfinding)
-            {
-                drawManager.doDrawPathfinding = toToggle.isOn;
-            }
+            drawManager.doDrawPathfindingTree = toToggle.isOn;
         }
 
     }
@@ -101,14 +99,14 @@ public class UIScript : MonoBehaviour
     public void simNode()
     {
         //Don't run this if we haven't set a goal yet
-        if (!pathfindingScript.arrowScript.finishedPlacingGoal)
+        if (!pathfinding.arrowScript.finishedPlacingGoal)
             return;
         //Don't run this si we are done pathfinding
-        else if (pathfindingScript.donePathfinding)
+        else if (pathfinding.donePathfinding)
             return;
 
-        pathfindingScript.simNextNode();
-        Node latestNode = pathfindingScript.getLatestNode();
+        pathfinding.simNextNode();
+        Node latestNode = pathfinding.getLatestNode();
 
         //latestNode.pose[2] *= 180 / Mathf.PI;
 
@@ -129,14 +127,14 @@ public class UIScript : MonoBehaviour
     public void simPath()
     {
         //Don't run this if we haven't set a goal yet
-        if (!pathfindingScript.arrowScript.finishedPlacingGoal)
+        if (!pathfinding.arrowScript.finishedPlacingGoal)
             return;
         //Don't run this si we are done pathfinding
-        else if (pathfindingScript.donePathfinding)
+        else if (pathfinding.donePathfinding)
             return;
 
-        pathfindingScript.simNextPath();
-        Node latestNode = pathfindingScript.getLatestNode();
+        pathfinding.simNextPath();
+        Node latestNode = pathfinding.getLatestNode();
 
         //latestNode.pose[2] *= 180 / Mathf.PI;
 
@@ -169,7 +167,7 @@ public class UIScript : MonoBehaviour
     //Resets the vars in the misc scripts
     public void resetScripts()
     {
-        pathfindingScript.resetPathfinding();
+        pathfinding.resetPathfinding();
         arrowScript.resetArrowScript();
         drawManager.resetDrawManager();
     }

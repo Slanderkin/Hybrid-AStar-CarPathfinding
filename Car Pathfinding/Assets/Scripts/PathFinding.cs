@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq; // Used to copy a list
 using UnityEngine;
 
 
@@ -29,9 +30,13 @@ namespace Pathfinding
         private float goalY;
         private float goalHeading;
         private Vector3 goalPose;
+        private Vector3 prevGoalPose;
 
         private List<Node> nodeList;
         private Node currNode;
+        private List<Node> prevNodeList;
+        private Node prevCurrNode;
+
         private FastPriorityQueue<Node> costQueue;
         public bool startedPathfinding = false;
         public bool donePathfinding = false;
@@ -47,17 +52,20 @@ namespace Pathfinding
         private int worldWidth;
         private int worldHeight;
 
+        public GameObject carCollisionDummy;
+        public BoxCollider2D carCollisionDummyCollider;
+
         public Helper helper;
         public ArrowScript arrowScript;
         public DrawManager drawManager;
         public UIScript uiScript;
+        public WorldScript worldScript;
+        public Car car;
+
         public bool doDraw;
 
-        //Make a 2d array of hashmap of intlists
-        // Index the 2d array at [x,y] and you will get a hashset of ints, this makes it easy to look up if an discrete angle has existed before at a discrete x and y coord
-        HashSet<int>[,] lookUp;
-
-        
+        public Cell[,] cellList;
+      
 
         void Start()
         {
@@ -69,18 +77,13 @@ namespace Pathfinding
             costQueue = new FastPriorityQueue<Node>(priorityQueueMaxSize);
 
             nodeList = new List<Node>();
+            prevNodeList = new List<Node>();
+            prevCurrNode = new Node();
 
+            carCollisionDummy.transform.localScale = new Vector3(30, 30, 1);
+            carCollisionDummyCollider = carCollisionDummy.GetComponent<BoxCollider2D>();
 
-            //Setup the hashtable used in the A* for pose lookups
-            lookUp = new HashSet<int>[worldWidth, worldHeight];
-
-            for (int i = 0; i < worldWidth; i++)
-            {
-                for (int j = 0; j < worldHeight; j++)
-                {
-                    lookUp[i, j] = new HashSet<int>();
-                }
-            }
+            cellList = worldScript.cellList;
 
 
         }
@@ -97,6 +100,8 @@ namespace Pathfinding
             if (donePathfinding)
             {
                 drawManager.drawFinalPath(currNode);
+                resetPathfinding();
+                arrowScript.resetArrowScript();
             }
         }
 
@@ -105,11 +110,14 @@ namespace Pathfinding
         {
 
             //Don't run this in the case when we have already started (doing the debugger)
-            if (startedPathfinding)
+            if (startedPathfinding)               
                 return;
 
+
+
+            drawManager.resetDrawManager();
             
-            Vector3 currPose = new Vector3(Parameters.carX0, Parameters.carY0, 0);
+            Vector3 currPose = new Vector3(car.currPose[0], car.currPose[1], car.currPose[2]);
             Vector3 goalPose = new Vector3(goalX, goalY, goalHeading * Mathf.Deg2Rad);
 
             startedPathfinding = true;
@@ -144,10 +152,10 @@ namespace Pathfinding
                     move(currNode, newNode, movementParameters[i]);
                     Vector2Int discreteCarPos = helper.worldPos2Cell(newNode.pose.x, newNode.pose.y);
 
-                    if (isValidMovement(discreteCarPos))
+                    if (!willCollide(newNode.pose))
                     {
 
-                        if (lookUp[discreteCarPos.x, discreteCarPos.y].Add((Mathf.RoundToInt(Mathf.Rad2Deg * newNode.pose.z / 15) * 15) % 360))
+                        if (cellList[discreteCarPos.x, discreteCarPos.y].anglesContained.Add((Mathf.RoundToInt(Mathf.Rad2Deg * newNode.pose.z / 15) * 15) % 360))
                         {
 
                             newNode.assignHCost(goalPose, newNode.dir == 1 ? false : true, newNode.cameFrom.steerAngle == newNode.steerAngle ? false : true);
@@ -165,6 +173,9 @@ namespace Pathfinding
                             {
                                 donePathfinding = true;
                                 currNode = newNode;
+                                car.updatePose(currNode.pose);
+                                drawManager.pathfindingCopy = nodeList.ToList();
+                                drawManager.updateCarSpritePoses();
                                 return;
                             }
                         }
@@ -175,7 +186,14 @@ namespace Pathfinding
             }
             
             donePathfinding = true;
+            car.updatePose(currNode.pose);
+            drawManager.pathfindingCopy = nodeList.ToList();
+            drawManager.updateCarSpritePoses();
         }
+
+        //====================================
+        //         Misc Helper Funcs
+        //====================================
 
         //Basic car motion that takes a turn direction (1 left, 0 straight, -1 right) and a drive direction (1 fwd, -1 back)
         //Returns whether or not the movement is valid
@@ -239,14 +257,6 @@ namespace Pathfinding
             return (currNode.hCost < 20 && Mathf.Abs(currNode.pose[2] - goalPose[2]) < 10*Mathf.Deg2Rad );
         }
 
-        //Determines if a movement would cause a car to go out of bounds
-        //Later plans include obstacles as well
-        private bool isValidMovement(Vector2Int discretePos)
-        {
-            return (discretePos.x < worldWidth && discretePos.y > -1 && discretePos.y < worldHeight && discretePos.y > -1);
-        }
-
-
         //Sets the goal pose once it has been determined from placing the arrow
         private void setGoal()
         {
@@ -266,32 +276,65 @@ namespace Pathfinding
             goalSet = false;
             iterationNum = 0;
 
+
+            prevGoalPose = goalPose;
+            prevCurrNode.copy(currNode);
+            prevNodeList = nodeList.ToList();
+
             costQueue.Clear();
             currNode = null;
             nodeList.Clear();
-            cleanLookup();
+            cleancellList();
         }
 
         //Empties the hash table that stores the various angles that we have observed at each x,y location, this is basically 3D A* capturing 2D motion: x,y,theta
-        private void cleanLookup()
+        private void cleancellList()
         {
             for (int i = 0; i < worldWidth; i++)
             {
                 for (int j = 0; j < worldHeight; j++)
                 {
-                    lookUp[i, j].Clear();
+                    cellList[i, j].anglesContained.Clear();
                 }
             }
+        }
+
+        //Detects if being in the proposed pose would cause a collision with an obstacle or the "world border" (This is not efficient)
+        public bool willCollide(Vector3 collisionGhostPose)
+        {
+            carCollisionDummyCollider.transform.rotation = Quaternion.Euler(0, 0, collisionGhostPose[2] * Mathf.Rad2Deg);
+            carCollisionDummyCollider.attachedRigidbody.position = (Vector2)collisionGhostPose;
+            carCollisionDummyCollider.attachedRigidbody.transform.position = (Vector2)collisionGhostPose;
+
+
+            //Detect if this new pose would cause a wall coliision
+            //if (maxPoints[0] > Parameters.worldSizeX || maxPoints[1] > Parameters.worldSizeY || minPoints[0] < 0 || minPoints[1] < 0)
+            //return true;
+            if (carCollisionDummyCollider.Distance(arrowScript.worldScript.borderCollider).isOverlapped)
+                return true;
+
+            //Loop through all of the obstacle colliders
+            //Do .distance from the ghost to each obstacle
+            //If any is overlapped, return as a collision occured and this is not a valid pose
+            foreach (Obstacle obstacle in arrowScript.worldScript.obstacleList)
+            {
+                if (carCollisionDummyCollider.Distance(obstacle.obstacleCollider).isOverlapped)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         //====================================
         //       Misc Getter Functions
         //====================================
 
-        //Return the goal pose
-        public Vector3 getGoalPose()
+        //Return the goal pose of the previous run
+        public Vector3 getPrevGoalPose()
         {
-            return goalPose;
+            return prevGoalPose;
         }
 
         //return iteration number
@@ -300,6 +343,28 @@ namespace Pathfinding
             return iterationNum;
         }
 
+        //Returns the final node in the last A* sequence ran
+        public Node getPrevNode()
+        {
+            if (prevCurrNode != null)
+                return prevCurrNode;
+            return null;
+        }
+
+        //Returns the node most recently used
+        public Node getLatestNode()
+        {
+            if (currNode != null)
+                return currNode;
+            return null;
+        }
+
+        public List<Node> getPrevNodeList()
+        {
+            if (prevNodeList != null)
+                return prevNodeList;
+            return null;
+        }
 
         //====================================
         // Public Functions for Path Debugger
@@ -329,10 +394,10 @@ namespace Pathfinding
                     move(currNode, newNode, movementParameters[i]);
                     Vector2Int discreteCarPos = helper.worldPos2Cell(newNode.pose.x, newNode.pose.y);
 
-                    if (isValidMovement(discreteCarPos))
+                    if (!willCollide(newNode.pose))
                     {
                         
-                        if (lookUp[discreteCarPos.x, discreteCarPos.y].Add((Mathf.RoundToInt(Mathf.Rad2Deg * newNode.pose.z / 15) * 15) % 360))
+                        if (cellList[discreteCarPos.x, discreteCarPos.y].anglesContained.Add((Mathf.RoundToInt(Mathf.Rad2Deg * newNode.pose.z / 15) * 15) % 360))
                         {
 
                             newNode.assignHCost(goalPose, newNode.dir == 1 ? false : true, newNode.cameFrom.steerAngle == newNode.steerAngle ? false : true);
@@ -350,6 +415,7 @@ namespace Pathfinding
                             {
                                 donePathfinding = true;
                                 currNode = newNode;
+                                car.updatePose(currNode.pose);
                                 return;
                             }
                         }
@@ -370,10 +436,10 @@ namespace Pathfinding
                     move(currNode, newNode, movementParameters[i]);
                     Vector2Int discreteCarPos = helper.worldPos2Cell(newNode.pose.x, newNode.pose.y);
 
-                    if (isValidMovement(discreteCarPos))
+                    if (!willCollide(newNode.pose))
                     {
                         
-                        if (lookUp[discreteCarPos.x, discreteCarPos.y].Add((Mathf.RoundToInt(Mathf.Rad2Deg * newNode.pose.z / 15) * 15) % 360))
+                        if (cellList[discreteCarPos.x, discreteCarPos.y].anglesContained.Add((Mathf.RoundToInt(Mathf.Rad2Deg * newNode.pose.z / 15) * 15) % 360))
                         {
 
                             newNode.assignHCost(goalPose, newNode.dir == 1 ? false : true, newNode.cameFrom.steerAngle == newNode.steerAngle ? false : true);
@@ -391,6 +457,7 @@ namespace Pathfinding
                             {
                                 donePathfinding = true;
                                 currNode = newNode;
+                                car.updatePose(currNode.pose);
                                 return;
                             }
                         }
@@ -431,10 +498,10 @@ namespace Pathfinding
                 move(currNode, newNode, movementParameters[pathDebuggerCurrentInd]);
                 Vector2Int discreteCarPos = helper.worldPos2Cell(newNode.pose.x, newNode.pose.y);
 
-                if (isValidMovement(discreteCarPos))
+                if (!willCollide(newNode.pose))
                 {
                     
-                    if (lookUp[discreteCarPos.x, discreteCarPos.y].Add((Mathf.RoundToInt(Mathf.Rad2Deg * newNode.pose.z / 15) * 15) % 360))
+                    if (cellList[discreteCarPos.x, discreteCarPos.y].anglesContained.Add((Mathf.RoundToInt(Mathf.Rad2Deg * newNode.pose.z / 15) * 15) % 360))
                     {
 
                         newNode.assignHCost(goalPose, newNode.dir == 1 ? false : true, newNode.cameFrom.steerAngle == newNode.steerAngle ? false : true);
@@ -453,6 +520,7 @@ namespace Pathfinding
                         {
                             donePathfinding = true;
                             currNode = newNode;
+                            car.updatePose(currNode.pose);
                             return;
                         }
                     }
@@ -474,10 +542,10 @@ namespace Pathfinding
                 move(currNode, newNode, movementParameters[pathDebuggerCurrentInd]);
                 Vector2Int discreteCarPos = helper.worldPos2Cell(newNode.pose.x, newNode.pose.y);
 
-                if (isValidMovement(discreteCarPos))
+                if (!willCollide(newNode.pose))
                 {
                     
-                    if (lookUp[discreteCarPos.x, discreteCarPos.y].Add((Mathf.RoundToInt(Mathf.Rad2Deg * newNode.pose.z / 15) * 15) % 360))
+                    if (cellList[discreteCarPos.x, discreteCarPos.y].anglesContained.Add((Mathf.RoundToInt(Mathf.Rad2Deg * newNode.pose.z / 15) * 15) % 360))
                     {
 
                         newNode.assignHCost(goalPose, newNode.dir == 1 ? false : true, newNode.cameFrom.steerAngle == newNode.steerAngle ? false : true);
@@ -496,6 +564,7 @@ namespace Pathfinding
                         {
                             donePathfinding = true;
                             currNode = newNode;
+                            car.updatePose(currNode.pose);
                             return;
                         }
                     }
@@ -514,20 +583,7 @@ namespace Pathfinding
             }
         }
 
-        //Returns the node most recently used
-        public Node getLatestNode()
-        {
-            if (currNode != null)
-                return currNode;
-            return null;
-        }
-
-        public List<Node> getNodeList()
-        {
-            if (nodeList != null)
-                return nodeList;
-            return null;
-        }
+        
     }
 }
 

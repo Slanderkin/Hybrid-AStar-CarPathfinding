@@ -68,6 +68,20 @@ namespace Pathfinding
             get { return hCost + gCost; }
         }
 
+        //Takes in a node and copies its values to this node
+        public void copy(Node toCopy)
+        {
+            cameFrom = toCopy.cameFrom;
+            pose = toCopy.pose;
+            childPoses = toCopy.childPoses;
+            numChildren = toCopy.numChildren;
+            dir = toCopy.dir;
+            steerAngle = toCopy.steerAngle;
+            gCost = toCopy.gCost; //Cost of movement made so far (penalized for reverse movement)
+            hCost = toCopy.hCost; //Cost of movement to be made (distance from goal)
+            distMoved = toCopy.distMoved;
+            isTopNode = toCopy.isTopNode;
+    }
     }
 
     
