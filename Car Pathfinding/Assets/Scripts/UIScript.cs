@@ -87,6 +87,7 @@ public class UIScript : MonoBehaviour
         {
 
             debugMenu.enabled = toToggle.isOn;
+            pathfinding.doDebug = toToggle.isOn;
 
         }
         else if (toToggle.name == "Pathfinding Line Toggle")

@@ -43,7 +43,7 @@ namespace Pathfinding
         public bool goalSet = false;
 
         private int pathDebuggerCurrentInd = 0;
-        private const int maxIterations = 5000;
+        private const int maxIterations = 50000;
         private int iterationNum = 0;
         private const int priorityQueueMaxSize = 1000000; //Max # of Nodes allowed in the queue
 
@@ -63,6 +63,7 @@ namespace Pathfinding
         public Car car;
 
         public bool doDraw;
+        public bool doDebug;
 
         public Cell[,] cellList;
       
@@ -85,7 +86,7 @@ namespace Pathfinding
 
             cellList = worldScript.cellList;
 
-
+            doDebug = false;
         }
 
         private void Update()
@@ -113,6 +114,8 @@ namespace Pathfinding
             if (startedPathfinding)               
                 return;
 
+            if (doDebug)
+                return;
 
 
             drawManager.resetDrawManager();
